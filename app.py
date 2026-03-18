@@ -184,7 +184,7 @@ def health():
     return jsonify({
         'status':       'online',
         'service':      'Axiom Student Converter',
-        'version':      '3.0.0',
+        'version':      '3.0.1',
         'libreoffice':  'ok' if lo_ok else 'MISSING',
         'ghostscript':  'ok' if gs_ok else 'MISSING',
         'limits': {
