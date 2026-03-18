@@ -1,0 +1,21 @@
+[build]
+builder = "nixpacks"
+
+[build.nixpacksPlan.phases.setup]
+nixPkgs = [
+  "libreoffice",
+  "ghostscript",
+  "python311",
+  "python311Packages.pip",
+]
+
+[build.nixpacksPlan.phases.install]
+cmds = ["pip install -r requirements.txt"]
+
+[build.nixpacksPlan.phases.build]
+cmds = []
+
+[deploy]
+startCommand = "gunicorn app:app --workers 2 --timeout 120 --bind 0.0.0.0:$PORT"
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
