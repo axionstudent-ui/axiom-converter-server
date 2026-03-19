@@ -1,0 +1,44 @@
+{
+  "codes": [
+    {
+      "code": "AXVIP-2847-9163-5E4F",
+      "operations": 12,
+      "used_by": null,
+      "activated_at": null,
+      "device_id": null,
+      "is_active": true
+    },
+    {
+      "code": "AXVIP-7391-4852-1D9C",
+      "operations": 12,
+      "used_by": null,
+      "activated_at": null,
+      "device_id": null,
+      "is_active": true
+    },
+    {
+      "code": "AXVIP-5624-8037-7A2B",
+      "operations": 12,
+      "used_by": null,
+      "activated_at": null,
+      "device_id": null,
+      "is_active": true
+    },
+    {
+      "code": "AXVIP-1958-3746-6C8D",
+      "operations": 12,
+      "used_by": null,
+      "activated_at": null,
+      "device_id": null,
+      "is_active": true
+    },
+    {
+      "code": "AXVIP-9043-6182-3F5A",
+      "operations": 12,
+      "used_by": null,
+      "activated_at": null,
+      "device_id": null,
+      "is_active": true
+    }
+  ]
+}
