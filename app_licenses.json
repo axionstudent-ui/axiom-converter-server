@@ -1,0 +1,25 @@
+{
+  "licenses": [
+    {
+      "code":         "BETA-4X7K-9M2P-3Q8W",
+      "device_id":    null,
+      "activated_at": null,
+      "is_used":      false,
+      "label":        "beta_user_1"
+    },
+    {
+      "code":         "BETA-6R1N-5H4J-7T2L",
+      "device_id":    null,
+      "activated_at": null,
+      "is_used":      false,
+      "label":        "beta_user_2"
+    },
+    {
+      "code":         "BETA-2W8Y-3K6M-9P4X",
+      "device_id":    null,
+      "activated_at": null,
+      "is_used":      false,
+      "label":        "beta_user_3"
+    }
+  ]
+}

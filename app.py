@@ -15,6 +15,149 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
+LICENSES_FILE = os.path.join(
+    os.path.dirname(__file__),
+    'app_licenses.json')
+
+# ── قراءة وحفظ الرخص ──────────────────────────────────
+def _load_licenses():
+    with open(LICENSES_FILE, 'r',
+              encoding='utf-8') as f:
+        return json.load(f)
+
+def _save_licenses(data):
+    with open(LICENSES_FILE, 'w',
+              encoding='utf-8') as f:
+        json.dump(data, f,
+                  ensure_ascii=False, indent=2)
+
+# ── توليد بصمة الجهاز ─────────────────────────────────
+def _fingerprint(device_id: str, ip: str) -> str:
+    raw = f'AXIOM::{device_id}::{ip}'
+    return hashlib.sha256(
+        raw.encode('utf-8')).hexdigest()
+
+# ══════════════════════════════════════════════════════
+# POST /app-activate
+# تفعيل رخصة التطبيق — مرة واحدة لجهاز واحد فقط
+# ══════════════════════════════════════════════════════
+@app.route('/app-activate', methods=['POST'])
+def app_activate():
+    data      = request.get_json(silent=True) or {}
+    code      = str(data.get('code',      '')).strip().upper()
+    device_id = str(data.get('device_id', '')).strip()
+    ip        = (request.headers
+                 .get('X-Forwarded-For', '')
+                 .split(',')[0].strip()
+                 or request.remote_addr or '')
+
+    # تحقق من البيانات
+    if not code or not device_id:
+        return jsonify({
+            'success': False,
+            'error':   'missing_fields',
+            'message': 'بيانات غير مكتملة',
+        }), 400
+
+    # تحقق من صيغة الكود BETA-XXXX-XXXX-XXXX
+    parts = code.split('-')
+    if len(parts) != 4 or parts[0] != 'BETA':
+        return jsonify({
+            'success': False,
+            'error':   'invalid_format',
+            'message': 'صيغة الكود غير صحيحة',
+        }), 400
+
+    fp   = _fingerprint(device_id, ip)
+    data = _load_licenses()
+
+    # البحث عن الكود
+    target = None
+    for lic in data['licenses']:
+        if lic['code'].upper() == code:
+            target = lic
+            break
+
+    # الكود غير موجود
+    if target is None:
+        logger.warning(
+            f'Invalid app code: {code} '
+            f'device={device_id[:8]}...')
+        return jsonify({
+            'success': False,
+            'error':   'not_found',
+            'message': 'الكود غير صحيح',
+        }), 404
+
+    # الكود مستخدم مسبقاً
+    if target['is_used']:
+        saved_fp = target.get('device_id', '')
+
+        # نفس الجهاز — اسمح بالدخول
+        if saved_fp == fp:
+            return jsonify({
+                'success':        True,
+                'already_active': True,
+                'message':
+                    'الجهاز مسجّل ومفعّل',
+            })
+
+        # جهاز مختلف — ارفض بشكل قاطع
+        logger.warning(
+            f'Code {code} used from '
+            f'different device!')
+        return jsonify({
+            'success': False,
+            'error':   'device_mismatch',
+            'message':
+                'هذا الكود مفعّل على جهاز آخر '
+                'ولا يمكن استخدامه على هذا الجهاز',
+        }), 403
+
+    # تفعيل الكود لأول مرة — ربطه بهذا الجهاز
+    target['device_id']    = fp
+    target['is_used']      = True
+    target['activated_at'] = int(time.time())
+    _save_licenses(data)
+
+    logger.info(
+        f'App activated: code={code} '
+        f'device={device_id[:8]}...')
+
+    return jsonify({
+        'success':        True,
+        'already_active': False,
+        'message':        'تم التفعيل بنجاح',
+    })
+
+# ══════════════════════════════════════════════════════
+# POST /app-verify
+# التحقق عند كل إقلاع للتطبيق
+# ══════════════════════════════════════════════════════
+@app.route('/app-verify', methods=['POST'])
+def app_verify():
+    data      = request.get_json(silent=True) or {}
+    code      = str(data.get('code',      '')).strip().upper()
+    device_id = str(data.get('device_id', '')).strip()
+    ip        = (request.headers
+                 .get('X-Forwarded-For', '')
+                 .split(',')[0].strip()
+                 or request.remote_addr or '')
+
+    if not code or not device_id:
+        return jsonify({'valid': False}), 400
+
+    fp       = _fingerprint(device_id, ip)
+    licenses = _load_licenses()
+
+    for lic in licenses['licenses']:
+        if (lic['code'].upper() == code and
+                lic['is_used'] and
+                lic.get('device_id') == fp):
+            return jsonify({'valid': True})
+
+    return jsonify({'valid': False})
+
 # ══════════════════════════════════════════════════════
 # مسار ملف الأكواد
 # ══════════════════════════════════════════════════════
