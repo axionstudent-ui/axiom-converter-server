@@ -6,6 +6,7 @@ import tempfile
 import subprocess
 import shutil
 import logging
+import traceback
 from flask import Flask, request, send_file, jsonify
 from functools import wraps
 
@@ -15,471 +16,209 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-LICENSES_FILE = os.path.join(
+# ══════════════════════════════════════════════════════
+# مسار ملف الاستخدام
+# ══════════════════════════════════════════════════════
+USAGE_FILE = os.path.join(
     os.path.dirname(__file__),
-    'app_licenses.json')
+    'usage_tracking.json')
 
-# ── قراءة وحفظ الرخص ──────────────────────────────────
-def _load_licenses():
-    with open(LICENSES_FILE, 'r',
-              encoding='utf-8') as f:
-        return json.load(f)
+# ── توليد بصمة الجهاز (Stable Hardware ID) ──
+def _fingerprint(device_id: str) -> str:
+    raw = f'AXIOM_STABLE::{device_id}'
+    return hashlib.sha256(raw.encode('utf-8')).hexdigest()
 
-def _save_licenses(data):
-    with open(LICENSES_FILE, 'w',
-              encoding='utf-8') as f:
-        json.dump(data, f,
-                  ensure_ascii=False, indent=2)
-
-# ── توليد بصمة الجهاز ─────────────────────────────────
-def _fingerprint(device_id: str, ip: str) -> str:
-    raw = f'AXIOM::{device_id}::{ip}'
-    return hashlib.sha256(
-        raw.encode('utf-8')).hexdigest()
-
-# ══════════════════════════════════════════════════════
-# POST /app-activate
-# تفعيل رخصة التطبيق — مرة واحدة لجهاز واحد فقط
-# ══════════════════════════════════════════════════════
-@app.route('/app-activate', methods=['POST'])
-def app_activate():
-    data      = request.get_json(silent=True) or {}
-    code      = str(data.get('code',      '')).strip().upper()
-    device_id = str(data.get('device_id', '')).strip()
-    ip        = (request.headers
-                 .get('X-Forwarded-For', '')
-                 .split(',')[0].strip()
-                 or request.remote_addr or '')
-
-    # تحقق من البيانات
-    if not code or not device_id:
-        return jsonify({
-            'success': False,
-            'error':   'missing_fields',
-            'message': 'بيانات غير مكتملة',
-        }), 400
-
-    # تحقق من صيغة الكود BETA-XXXX-XXXX-XXXX
-    parts = code.split('-')
-    if len(parts) != 4 or parts[0] != 'BETA':
-        return jsonify({
-            'success': False,
-            'error':   'invalid_format',
-            'message': 'صيغة الكود غير صحيحة',
-        }), 400
-
-    fp   = _fingerprint(device_id, ip)
-    data = _load_licenses()
-
-    # البحث عن الكود
-    target = None
-    for lic in data['licenses']:
-        if lic['code'].upper() == code:
-            target = lic
-            break
-
-    # الكود غير موجود
-    if target is None:
-        logger.warning(
-            f'Invalid app code: {code} '
-            f'device={device_id[:8]}...')
-        return jsonify({
-            'success': False,
-            'error':   'not_found',
-            'message': 'الكود غير صحيح',
-        }), 404
-
-    # الكود مستخدم مسبقاً
-    if target['is_used']:
-        saved_fp = target.get('device_id', '')
-
-        # نفس الجهاز — اسمح بالدخول
-        if saved_fp == fp:
-            return jsonify({
-                'success':        True,
-                'already_active': True,
-                'message':
-                    'الجهاز مسجّل ومفعّل',
-            })
-
-        # جهاز مختلف — ارفض بشكل قاطع
-        logger.warning(
-            f'Code {code} used from '
-            f'different device!')
-        return jsonify({
-            'success': False,
-            'error':   'device_mismatch',
-            'message':
-                'هذا الكود مفعّل على جهاز آخر '
-                'ولا يمكن استخدامه على هذا الجهاز',
-        }), 403
-
-    # تفعيل الكود لأول مرة — ربطه بهذا الجهاز
-    target['device_id']    = fp
-    target['is_used']      = True
-    target['activated_at'] = int(time.time())
-    _save_licenses(data)
-
-    logger.info(
-        f'App activated: code={code} '
-        f'device={device_id[:8]}...')
-
-    return jsonify({
-        'success':        True,
-        'already_active': False,
-        'message':        'تم التفعيل بنجاح',
-    })
-
-# ══════════════════════════════════════════════════════
-# POST /app-verify
-# التحقق عند كل إقلاع للتطبيق
-# ══════════════════════════════════════════════════════
-@app.route('/app-verify', methods=['POST'])
-def app_verify():
-    data      = request.get_json(silent=True) or {}
-    code      = str(data.get('code',      '')).strip().upper()
-    device_id = str(data.get('device_id', '')).strip()
-    ip        = (request.headers
-                 .get('X-Forwarded-For', '')
-                 .split(',')[0].strip()
-                 or request.remote_addr or '')
-
-    if not code or not device_id:
-        return jsonify({'valid': False}), 400
-
-    fp       = _fingerprint(device_id, ip)
-    licenses = _load_licenses()
-
-    for lic in licenses['licenses']:
-        if (lic['code'].upper() == code and
-                lic['is_used'] and
-                lic.get('device_id') == fp):
-            return jsonify({'valid': True})
-
-    return jsonify({'valid': False})
-
-# ══════════════════════════════════════════════════════
-# مسار ملف الأكواد
-# ══════════════════════════════════════════════════════
-CODES_FILE = os.path.join(
-    os.path.dirname(__file__),
-    'activation_codes.json')
-
-# ══════════════════════════════════════════════════════
-# قراءة وحفظ الأكواد
-# ══════════════════════════════════════════════════════
-def _load_codes() -> dict:
+def _load_usage():
+    if not os.path.exists(USAGE_FILE):
+        return {'devices': {}}
     try:
-        if not os.path.exists(CODES_FILE):
-             return {'codes': []}
-        with open(CODES_FILE, 'r',
-                  encoding='utf-8') as f:
-            return json.load(f)
+        with open(USAGE_FILE, 'r') as f:
+            data = json.load(f)
+            return data if isinstance(data, dict) else {'devices': {}}
     except Exception as e:
-        logger.error(f'Load codes error: {e}')
-        return {'codes': []}
+        logger.error(f'Error loading usage: {e}')
+        return {'devices': {}}
 
-def _save_codes(data: dict):
+def _save_usage(data):
     try:
-        with open(CODES_FILE, 'w',
-                  encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False,
-                      indent=2)
-    except Exception as e:
-        logger.error(f'Save codes error: {e}')
+        with open(USAGE_FILE, 'w') as f:
+            json.dump(data, f, indent=2)
+    except:
+        pass
 
 # ══════════════════════════════════════════════════════
-# توليد بصمة الجهاز (hash) من معرفات متعددة
+# Decorator للتحقق من القيود قبل كل عملية (5 مرات / 24 ساعة)
 # ══════════════════════════════════════════════════════
-def _build_device_fingerprint(
-        device_id: str, ip: str) -> str:
-    raw = f'{device_id}:{ip}'
-    return hashlib.sha256(
-        raw.encode()).hexdigest()
-
-# ══════════════════════════════════════════════════════
-# ENDPOINT: تفعيل كود VIP
-# POST /activate
-# Body: device_id, username, code
-# ══════════════════════════════════════════════════════
-@app.route('/activate', methods=['POST'])
-def activate():
-    data      = request.get_json(silent=True) or {}
-    code      = str(data.get('code',      '')).strip().upper()
-    username  = str(data.get('username',  '')).strip()
-    device_id = str(data.get('device_id', '')).strip()
-    ip        = (request.headers
-                 .get('X-Forwarded-For', '')
-                 .split(',')[0].strip()
-                 or request.remote_addr or '')
-
-    if not code or not username or not device_id:
-        return jsonify({
-            'success': False,
-            'error':   'missing_fields',
-            'message': 'بيانات غير مكتملة',
-        }), 400
-
-    # تحقق من صيغة الكود (AXVIP-XXXX-XXXX-XXXX)
-    parts = code.split('-')
-    if len(parts) != 4 or parts[0] != 'AXVIP':
-        return jsonify({
-            'success': False,
-            'error':   'invalid_format',
-            'message': 'صيغة الكود غير صحيحة',
-        }), 400
-
-    fingerprint = _build_device_fingerprint(
-        device_id, ip)
-    codes_data  = _load_codes()
-    codes       = codes_data.get('codes', [])
-
-    # البحث عن الكود
-    target = None
-    for c in codes:
-        if c.get('code', '').upper() == code:
-            target = c
-            break
-
-    # الكود غير موجود
-    if target is None:
-        logger.warning(
-            f'Invalid code attempt: {code} '
-            f'user={username}')
-        return jsonify({
-            'success': False,
-            'error':   'not_found',
-            'message': 'الكود غير صحيح أو غير موجود',
-        }), 404
-
-    # الكود معطّل
-    if not target.get('is_active', False):
-        return jsonify({
-            'success': False,
-            'error':   'deactivated',
-            'message': 'هذا الكود معطّل',
-        }), 403
-
-    # الكود مستخدم من قبل
-    if target.get('used_by') is not None:
-        existing_user   = target['used_by']
-        existing_device = target.get('device_id', '')
-
-        # نفس المستخدم ونفس الجهاز — أعد البيانات
-        if (existing_user == username and
-                existing_device == fingerprint):
-            return jsonify({
-                'success':         True,
-                'already_active':  True,
-                'operations_left': target.get(
-                    'operations', 0),
-                'message':
-                    'الكود مفعّل مسبقاً على حسابك',
-            })
-
-        # محاولة من مستخدم أو جهاز آخر — رفض قاطع
-        logger.warning(
-            f'Code {code} reuse attempt: '
-            f'user={username} '
-            f'device={device_id}')
-        return jsonify({
-            'success': False,
-            'error':   'already_used',
-            'message':
-                'هذا الكود مفعّل على حساب آخر '
-                'ولا يمكن استخدامه مرة أخرى',
-        }), 403
-
-    # تفعيل الكود
-    target['used_by']      = username
-    target['device_id']    = fingerprint
-    target['activated_at'] = int(time.time())
-    _save_codes(codes_data)
-
-    logger.info(
-        f'Code {code} activated: '
-        f'user={username}')
-
-    return jsonify({
-        'success':         True,
-        'already_active':  False,
-        'operations_left': target.get(
-            'operations', 12),
-        'message':
-            'تم تفعيل الكود بنجاح! '
-            'لديك 12 عملية VIP',
-    })
-
-# ══════════════════════════════════════════════════════
-# ENDPOINT: التحقق من حالة VIP
-# GET /vip-status?username=X&device_id=Y
-# ══════════════════════════════════════════════════════
-@app.route('/vip-status', methods=['GET'])
-def vip_status():
-    username  = request.args.get(
-        'username',  '').strip()
-    device_id = request.args.get(
-        'device_id', '').strip()
-    ip        = (request.headers
-                 .get('X-Forwarded-For', '')
-                 .split(',')[0].strip()
-                 or request.remote_addr or '')
-
-    if not username or not device_id:
-        return jsonify({'is_vip': False}), 400
-
-    fingerprint = _build_device_fingerprint(
-        device_id, ip)
-    codes_data  = _load_codes()
-
-    for c in codes_data.get('codes', []):
-        if (c.get('used_by') == username and
-                c.get('device_id') == fingerprint and
-                c.get('is_active', False)):
-            ops = c.get('operations', 0)
-            return jsonify({
-                'is_vip':          True,
-                'operations_left': ops,
-                'code':            c['code'],
-                'activated_at':    c.get(
-                    'activated_at'),
-            })
-
-    return jsonify({
-        'is_vip':          False,
-        'operations_left': 0,
-    })
-
-# ══════════════════════════════════════════════════════
-# Decorator للتحقق من VIP قبل كل عملية
-# ══════════════════════════════════════════════════════
-def vip_required(f):
+def limit_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        device_id = request.form.get(
-            'device_id', '').strip()
-        username  = request.form.get(
-            'username',  '').strip()
-        ip        = (request.headers
-                     .get('X-Forwarded-For', '')
-                     .split(',')[0].strip()
-                     or request.remote_addr or '')
+        device_id = request.form.get('device_id', '').strip()
+        username  = request.form.get('username',  '').strip()
+        
+        if not device_id:
+            return jsonify({'error': 'missing_device_id', 'message': 'معرّف الجهاز مفقود'}), 401
 
-        if not username or not device_id:
+        fp = _fingerprint(device_id)
+        usage_data = _load_usage()
+        
+        if fp not in usage_data['devices']:
+            usage_data['devices'][fp] = {
+                'daily_count': 0,
+                'last_reset': int(time.time()),
+            }
+        
+        device_usage = usage_data['devices'][fp]
+        now = int(time.time())
+        
+        # تصفير العداد اليومي كل 24 ساعة لكل جهاز
+        if now - device_usage.get('last_reset', 0) > 86400:
+            device_usage['daily_count'] = 0
+            device_usage['last_reset'] = now
+
+        limit = 5
+        used = device_usage['daily_count']
+        
+        if used >= limit:
             return jsonify({
-                'error':   'missing_auth',
-                'message': 'بيانات التحقق مفقودة',
-            }), 401
+                'error': 'daily_limit',
+                'message': 'لقد استهلكت جميع محاولاتك اليوم (5 محاولات). يرجى الانتظار حتى الغد.',
+                'reset_in_seconds': 86400 - (now - device_usage['last_reset'])
+            }), 429
 
-        fingerprint = _build_device_fingerprint(
-            device_id, ip)
-        codes_data  = _load_codes()
-        target      = None
-
-        for c in codes_data.get('codes', []):
-            if (c.get('used_by') == username and
-                    c.get('device_id') ==
-                    fingerprint and
-                    c.get('is_active', False)):
-                target = c
-                break
-
-        # لا يوجد VIP صالح
-        if target is None:
-            return jsonify({
-                'error':   'not_vip',
-                'message':
-                    'هذه الميزة تتطلب كود VIP '
-                    'مفعّل. فعّل كودك من الإعدادات.',
-            }), 403
-
-        # الرصيد نفد
-        if target.get('operations', 0) <= 0:
-            return jsonify({
-                'error':   'no_operations',
-                'message':
-                    'نفدت عمليات VIP الخاصة بك '
-                    '(12/12 مستخدمة)',
-            }), 402
-
-        # تمرير معلومات VIP للدالة
-        request.vip_code   = target['code']
-        request.vip_ops    = target['operations']
-        request.vip_target = target
-        request.codes_data = codes_data
+        request.usage_data = usage_data
+        request.device_fp = fp
+        request.remaining_ops = limit - used
+        
         return f(*args, **kwargs)
     return decorated
 
-def _deduct_vip_operation():
-    """خصم عملية واحدة بعد النجاح"""
+def _deduct_operation():
+    """تحديث العداد بعد نجاح العملية"""
     try:
-        target = request.vip_target
-        target['operations'] = max(
-            0, target.get('operations', 0) - 1)
-        _save_codes(request.codes_data)
-        logger.info(
-            f'VIP op used: '
-            f'user={request.form.get("username")} '
-            f'remaining={target["operations"]}')
+        usage_data = request.usage_data
+        device_usage = usage_data['devices'][request.device_fp]
+        device_usage['daily_count'] += 1
+        _save_usage(usage_data)
     except Exception as e:
-        logger.error(f'Deduct VIP op error: {e}')
+        logger.error(f'Usage update error: {e}')
 
 # ══════════════════════════════════════════════════════
-# Health Check
+# ENDPOINT: مسار الاستخدام
+# ══════════════════════════════════════════════════════
+@app.route('/usage', methods=['GET'])
+def usage_status():
+    device_id = request.args.get('device_id', '').strip()
+    if not device_id:
+        return jsonify({'error': 'missing_device_id'}), 400
+        
+    fp = _fingerprint(device_id)
+    usage_data = _load_usage()
+    
+    if fp not in usage_data['devices']:
+        usage_data['devices'][fp] = {
+            'daily_count': 0,
+            'last_reset': int(time.time()),
+        }
+        _save_usage(usage_data)
+
+    device_usage = usage_data['devices'][fp]
+    now = int(time.time())
+    
+    if now - device_usage.get('last_reset', 0) > 86400:
+        device_usage['daily_count'] = 0
+        device_usage['last_reset'] = now
+        _save_usage(usage_data)
+
+    used = device_usage['daily_count']
+    limit = 5
+    remaining = max(0, limit - used)
+    reset_in = 86400 - (now - device_usage['last_reset'])
+
+    return jsonify({
+        'used': used,
+        'limit': limit,
+        'remaining': remaining,
+        'reset_in_seconds': reset_in,
+    })
+
+# ══════════════════════════════════════════════════════
+# Health Check & Dashboard
 # ══════════════════════════════════════════════════════
 @app.route('/', methods=['GET'])
 def health():
     lo_ok = gs_ok = False
     try:
-        r = subprocess.run(
-            ['libreoffice', '--version'],
-            capture_output=True, timeout=5)
+        r = subprocess.run(['libreoffice', '--version'], capture_output=True, timeout=5)
         lo_ok = r.returncode == 0
     except Exception:
         pass
     try:
-        r = subprocess.run(
-            ['gs', '--version'],
-            capture_output=True, timeout=5)
+        r = subprocess.run(['gs', '--version'], capture_output=True, timeout=5)
         gs_ok = r.returncode == 0
     except Exception:
         pass
-
+        
+    html = f"""
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head>
+        <meta charset="UTF-8">
+        <title>Axiom Converter Status</title>
+        <style>
+            body {{ font-family: 'Cairo', sans-serif; background: #07090F; color: #DDE3F5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }}
+            .card {{ background: #0D1117; border: 1px solid #30363D; padding: 2rem; border-radius: 12px; min-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }}
+            h1 {{ color: #58A6FF; margin-top: 0; text-align: center; }}
+            .stat {{ display: flex; justify-content: space-between; margin: 10px 0; padding: 8px 0; border-bottom: 1px solid #21262d; }}
+            .label {{ color: #8B949E; }}
+            .value {{ font-weight: bold; }}
+            .status-ok {{ color: #238636; }}
+            .status-err {{ color: #F85149; }}
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <h1>Axiom Converter Dashboard</h1>
+            <div class="stat"><span class="label">الحالة:</span> <span class="value status-ok">متصل ●</span></div>
+            <div class="stat"><span class="label">الإصدار:</span> <span class="value">v5.0.0 (Limits Version)</span></div>
+            <div class="stat"><span class="label">Ghostscript:</span> <span class="value {'status-ok' if gs_ok else 'status-err'}">{"ok" if gs_ok else "MISSING"}</span></div>
+            <div class="stat"><span class="label">LibreOffice:</span> <span class="value {'status-ok' if lo_ok else 'status-err'}">{"ok" if lo_ok else "MISSING"}</span></div>
+            <div style="margin-top:20px; text-align:center; font-size: 0.8rem; color: #484f58;">
+                جميع الأنظمة تعمل بكفاءة عالية وفق القيود الجديدة
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    if 'html' in request.accept_mimetypes.values():
+        return html
     return jsonify({
-        'status':      'online',
-        'service':     'Axiom Student Converter',
-        "version": "PTP N49",
+        'status': 'online',
+        'service': 'Axiom Student Converter',
+        'version': 'v5.0.0',
         'libreoffice': 'ok' if lo_ok else 'MISSING',
         'ghostscript': 'ok' if gs_ok else 'MISSING',
     })
 
 # ══════════════════════════════════════════════════════
-# Convert — يتطلب VIP
+# Convert Endpoint
 # ══════════════════════════════════════════════════════
 @app.route('/convert', methods=['POST'])
-@vip_required
+@limit_required
 def convert():
-    logger.info('=== CONVERT (VIP) START ===')
+    logger.info('=== CONVERT START ===')
 
     if 'file' not in request.files:
         return jsonify({'error': 'no file'}), 400
 
-    f      = request.files['file']
-    to_fmt = request.form.get(
-        'to', 'pdf').lower().strip('.')
+    f = request.files['file']
+    to_fmt = request.form.get('to', 'pdf').lower().strip('.')
 
     if to_fmt not in ['pdf', 'docx', 'xlsx']:
-        return jsonify({
-            'error': f'unsupported: {to_fmt}'}), 422
+        return jsonify({'error': f'unsupported: {to_fmt}'}), 422
 
     tmp_dir = tempfile.mkdtemp()
     in_path = os.path.join(tmp_dir, f.filename)
     f.save(in_path)
-
-    size = os.path.getsize(in_path)
-    logger.info(
-        f'File: {f.filename} ({size}B) '
-        f'→ {to_fmt}')
 
     try:
         cmd = [
@@ -497,30 +236,25 @@ def convert():
 
         if result.returncode != 0:
             return jsonify({
-                'error':   'conversion_failed',
+                'error': 'conversion_failed',
                 'message': result.stderr[:300],
             }), 500
 
-        base     = os.path.splitext(f.filename)[0]
+        base = os.path.splitext(f.filename)[0]
         out_name = f'{base}.{to_fmt}'
         out_path = os.path.join(tmp_dir, out_name)
 
         if not os.path.exists(out_path):
             for fn in os.listdir(tmp_dir):
-                if (fn.lower().endswith(f'.{to_fmt}')
-                        and fn != f.filename):
-                    out_path = os.path.join(
-                        tmp_dir, fn)
+                if fn.lower().endswith(f'.{to_fmt}') and fn != f.filename:
+                    out_path = os.path.join(tmp_dir, fn)
                     out_name = fn
                     break
 
-        if (not os.path.exists(out_path) or
-                os.path.getsize(out_path) == 0):
-            return jsonify({
-                'error': 'empty output'}), 500
+        if not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
+            return jsonify({'error': 'empty output'}), 500
 
-        # خصم العملية بعد النجاح فقط
-        _deduct_vip_operation()
+        _deduct_operation()
 
         resp = send_file(
             out_path,
@@ -528,31 +262,29 @@ def convert():
             download_name=out_name,
             mimetype=_mime(to_fmt),
         )
-        resp.headers['X-VIP-Remaining'] = str(
-            request.vip_ops - 1)
+        resp.headers['X-Remaining'] = str(request.remaining_ops - 1)
         return resp
 
     except subprocess.TimeoutExpired:
         return jsonify({'error': 'timeout'}), 504
     except Exception as e:
-        logger.exception(e)
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Server Error: {traceback.format_exc()}')
+        return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
 # ══════════════════════════════════════════════════════
-# Merge — يتطلب VIP
+# Merge Endpoint
 # ══════════════════════════════════════════════════════
 @app.route('/merge', methods=['POST'])
-@vip_required
+@limit_required
 def merge():
     files = request.files.getlist('files')
     if len(files) < 2:
-        return jsonify({
-            'error': 'need 2+ files'}), 400
+        return jsonify({'error': 'need 2+ files'}), 400
 
     tmp_dir = tempfile.mkdtemp()
-    paths   = []
+    paths = []
 
     try:
         for fi in files:
@@ -562,12 +294,9 @@ def merge():
                 paths.append(fp)
 
         if len(paths) < 2:
-            return jsonify({
-                'error': 'valid files < 2'}), 400
+            return jsonify({'error': 'valid files < 2'}), 400
 
-        out_name = (request.form.get(
-            'output_name', 'merged') or
-            'merged') + '.pdf'
+        out_name = (request.form.get('output_name', 'merged') or 'merged') + '.pdf'
         out_path = os.path.join(tmp_dir, out_name)
 
         result = subprocess.run([
@@ -576,19 +305,15 @@ def merge():
             '-dPDFSETTINGS=/ebook',
             f'-sOutputFile={out_path}',
             *paths,
-        ], capture_output=True, text=True,
-           timeout=180)
+        ], capture_output=True, text=True, timeout=180)
 
         if result.returncode != 0:
-            return jsonify({
-                'error': result.stderr}), 500
+            return jsonify({'error': result.stderr}), 500
 
-        if (not os.path.exists(out_path) or
-                os.path.getsize(out_path) == 0):
-            return jsonify({
-                'error': 'empty output'}), 500
+        if not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
+            return jsonify({'error': 'empty output'}), 500
 
-        _deduct_vip_operation()
+        _deduct_operation()
 
         resp = send_file(
             out_path,
@@ -596,14 +321,13 @@ def merge():
             download_name=out_name,
             mimetype='application/pdf',
         )
-        resp.headers['X-VIP-Remaining'] = str(
-            request.vip_ops - 1)
+        resp.headers['X-Remaining'] = str(request.remaining_ops - 1)
         return resp
 
     except subprocess.TimeoutExpired:
         return jsonify({'error': 'timeout'}), 504
     except Exception as e:
-        logger.exception(e)
+        logger.error(f'Server Error: {traceback.format_exc()}')
         return jsonify({'error': str(e)}), 500
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
@@ -611,15 +335,10 @@ def merge():
 def _mime(fmt: str) -> str:
     return {
         'pdf':  'application/pdf',
-        'docx': ('application/vnd.openxmlformats-'
-                 'officedocument.wordprocessingml'
-                 '.document'),
-        'xlsx': ('application/vnd.openxmlformats-'
-                 'officedocument.spreadsheetml'
-                 '.sheet'),
+        'docx': ('application/vnd.openxmlformats-officedocument.wordprocessingml.document'),
+        'xlsx': ('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'),
     }.get(fmt, 'application/octet-stream')
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port,
-            debug=False)
+    app.run(host='0.0.0.0', port=port, debug=False)

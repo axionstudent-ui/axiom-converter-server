@@ -1,25 +1,704 @@
 {
   "licenses": [
     {
-      "code":         "BETA-4X7K-9M2P-3Q8W",
-      "device_id":    null,
+      "code": "BETA-64JX-F4GG-QVN3",
+      "device_id": null,
       "activated_at": null,
-      "is_used":      false,
-      "label":        "beta_user_1"
+      "is_used": false,
+      "label": "beta_user_1"
     },
     {
-      "code":         "BETA-6R1N-5H4J-7T2L",
-      "device_id":    null,
+      "code": "BETA-II6B-A9D0-JZU1",
+      "device_id": null,
       "activated_at": null,
-      "is_used":      false,
-      "label":        "beta_user_2"
+      "is_used": false,
+      "label": "beta_user_2"
     },
     {
-      "code":         "BETA-2W8Y-3K6M-9P4X",
-      "device_id":    null,
+      "code": "BETA-9HHN-I1A8-M3C2",
+      "device_id": null,
       "activated_at": null,
-      "is_used":      false,
-      "label":        "beta_user_3"
+      "is_used": false,
+      "label": "beta_user_3"
+    },
+    {
+      "code": "BETA-UARI-50Z0-Z4P2",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_4"
+    },
+    {
+      "code": "BETA-MSYA-1FH4-1RSS",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_5"
+    },
+    {
+      "code": "BETA-UZ47-3C27-KYU5",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_6"
+    },
+    {
+      "code": "BETA-8DSV-UM52-8ROH",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_7"
+    },
+    {
+      "code": "BETA-XHK0-0QTW-DG81",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_8"
+    },
+    {
+      "code": "BETA-OYME-430M-KG6M",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_9"
+    },
+    {
+      "code": "BETA-BDI6-APX7-NZME",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_10"
+    },
+    {
+      "code": "BETA-O4T5-2XUB-QAZ3",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_11"
+    },
+    {
+      "code": "BETA-G7SY-ZL0D-MYIG",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_12"
+    },
+    {
+      "code": "BETA-SFE4-7H3L-H5AA",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_13"
+    },
+    {
+      "code": "BETA-IGWJ-M54N-4MX6",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_14"
+    },
+    {
+      "code": "BETA-M57U-EWBG-62V7",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_15"
+    },
+    {
+      "code": "BETA-T1AB-XHGC-VN0B",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_16"
+    },
+    {
+      "code": "BETA-GGGX-EE55-3NP2",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_17"
+    },
+    {
+      "code": "BETA-XPBL-7QZJ-1CIH",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_18"
+    },
+    {
+      "code": "BETA-MB8Z-4EKF-YJDZ",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_19"
+    },
+    {
+      "code": "BETA-U66G-5FIX-OQDC",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_20"
+    },
+    {
+      "code": "BETA-DQ90-A6K7-NZP6",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_21"
+    },
+    {
+      "code": "BETA-8P63-VS85-R25D",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_22"
+    },
+    {
+      "code": "BETA-YO2E-NDM4-397F",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_23"
+    },
+    {
+      "code": "BETA-G8KL-RPXH-PQJ8",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_24"
+    },
+    {
+      "code": "BETA-YRSG-I4Q0-MJFQ",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_25"
+    },
+    {
+      "code": "BETA-TJZ9-9KJY-WT7W",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_26"
+    },
+    {
+      "code": "BETA-HSOR-77P5-YB0B",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_27"
+    },
+    {
+      "code": "BETA-E5MW-FPNY-LU4M",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_28"
+    },
+    {
+      "code": "BETA-7SS5-TQLG-YTK2",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_29"
+    },
+    {
+      "code": "BETA-3FX8-H7DT-8GC2",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_30"
+    },
+    {
+      "code": "BETA-H7DZ-7OJG-RCGL",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_31"
+    },
+    {
+      "code": "BETA-K2V5-5EIY-KEWY",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_32"
+    },
+    {
+      "code": "BETA-MRY2-QR8S-Y3XX",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_33"
+    },
+    {
+      "code": "BETA-OVHK-RGPS-X8UJ",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_34"
+    },
+    {
+      "code": "BETA-UJKK-TAVH-CZS0",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_35"
+    },
+    {
+      "code": "BETA-P4AA-OODP-RX45",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_36"
+    },
+    {
+      "code": "BETA-6K5A-FM3Q-5PUY",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_37"
+    },
+    {
+      "code": "BETA-JA49-Z6J1-DRH0",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_38"
+    },
+    {
+      "code": "BETA-SNW6-89JU-YLFL",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_39"
+    },
+    {
+      "code": "BETA-4YIH-BVGE-33K5",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_40"
+    },
+    {
+      "code": "BETA-KGKN-7NZI-4NOH",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_41"
+    },
+    {
+      "code": "BETA-LS6X-DQNZ-VT1L",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_42"
+    },
+    {
+      "code": "BETA-PI88-94BO-GK2M",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_43"
+    },
+    {
+      "code": "BETA-0308-OX7N-0VIN",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_44"
+    },
+    {
+      "code": "BETA-R866-5MYV-WB4T",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_45"
+    },
+    {
+      "code": "BETA-AM38-P34L-UHLS",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_46"
+    },
+    {
+      "code": "BETA-HXBT-749I-G6OX",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_47"
+    },
+    {
+      "code": "BETA-Q9NJ-IA8T-21MS",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_48"
+    },
+    {
+      "code": "BETA-LWT2-L4A3-LAB7",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_49"
+    },
+    {
+      "code": "BETA-SWOA-TF0V-ZCB9",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_50"
+    },
+    {
+      "code": "BETA-S38O-2S00-BQLI",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_51"
+    },
+    {
+      "code": "BETA-X03J-UEVE-J4GI",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_52"
+    },
+    {
+      "code": "BETA-YYCK-RL8V-65GE",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_53"
+    },
+    {
+      "code": "BETA-TDJT-UANU-GUR9",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_54"
+    },
+    {
+      "code": "BETA-59K9-F2YY-XS42",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_55"
+    },
+    {
+      "code": "BETA-7QCH-ICG7-HEJJ",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_56"
+    },
+    {
+      "code": "BETA-MKZZ-VOB6-09CR",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_57"
+    },
+    {
+      "code": "BETA-DSBH-N74V-0POU",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_58"
+    },
+    {
+      "code": "BETA-UC63-0XU2-WZKF",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_59"
+    },
+    {
+      "code": "BETA-8EJC-M4UR-08X7",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_60"
+    },
+    {
+      "code": "BETA-JAIM-NL8X-SJTN",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_61"
+    },
+    {
+      "code": "BETA-PYY4-R47X-20HG",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_62"
+    },
+    {
+      "code": "BETA-2U1Z-0YOC-8FRB",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_63"
+    },
+    {
+      "code": "BETA-NYP2-X96Z-LAJO",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_64"
+    },
+    {
+      "code": "BETA-9V9Q-L9GH-DTZP",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_65"
+    },
+    {
+      "code": "BETA-NIVR-T3D5-S2LL",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_66"
+    },
+    {
+      "code": "BETA-9TVI-H2BF-3XTQ",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_67"
+    },
+    {
+      "code": "BETA-YP74-2CFY-8C2O",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_68"
+    },
+    {
+      "code": "BETA-WMEP-UZ9I-JX4S",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_69"
+    },
+    {
+      "code": "BETA-ZBJ2-5EW6-7M5W",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_70"
+    },
+    {
+      "code": "BETA-5T32-HYHW-RU6T",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_71"
+    },
+    {
+      "code": "BETA-TRYA-01VJ-FK31",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_72"
+    },
+    {
+      "code": "BETA-2AH3-P7TZ-O6JH",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_73"
+    },
+    {
+      "code": "BETA-7GCL-LB05-IXDA",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_74"
+    },
+    {
+      "code": "BETA-VPQL-Y642-OA4W",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_75"
+    },
+    {
+      "code": "BETA-TSVU-NBYP-HBOL",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_76"
+    },
+    {
+      "code": "BETA-P4WD-8MEZ-8IUE",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_77"
+    },
+    {
+      "code": "BETA-D3E1-MUEZ-JYBI",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_78"
+    },
+    {
+      "code": "BETA-5HXS-EDMI-TQST",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_79"
+    },
+    {
+      "code": "BETA-Q4LS-40A3-OO16",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_80"
+    },
+    {
+      "code": "BETA-5H78-KBA8-S4WA",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_81"
+    },
+    {
+      "code": "BETA-8YCX-H3ED-5X91",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_82"
+    },
+    {
+      "code": "BETA-KAW7-VWZD-Z581",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_83"
+    },
+    {
+      "code": "BETA-W1OF-QQLB-SIT7",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_84"
+    },
+    {
+      "code": "BETA-HJ45-BQ3F-K6O4",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_85"
+    },
+    {
+      "code": "BETA-ZU8T-NJXG-ZHBV",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_86"
+    },
+    {
+      "code": "BETA-OXRS-Q3KR-PX61",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_87"
+    },
+    {
+      "code": "BETA-I3GG-3FHF-4BX0",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_88"
+    },
+    {
+      "code": "BETA-9N9N-QAO6-V5U1",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_89"
+    },
+    {
+      "code": "BETA-WCDV-DDME-030M",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_90"
+    },
+    {
+      "code": "BETA-HLJC-V0WB-U73C",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_91"
+    },
+    {
+      "code": "BETA-HN0K-PZHK-FAH1",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_92"
+    },
+    {
+      "code": "BETA-P7PU-6U1N-KYQM",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_93"
+    },
+    {
+      "code": "BETA-07XG-M9LZ-S7IF",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_94"
+    },
+    {
+      "code": "BETA-06Z5-KYMB-TR5U",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_95"
+    },
+    {
+      "code": "BETA-7ZFE-KG98-PF1Y",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_96"
+    },
+    {
+      "code": "BETA-22P4-78NG-XBUF",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_97"
+    },
+    {
+      "code": "BETA-ZDU0-NQBL-XBZY",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_98"
+    },
+    {
+      "code": "BETA-XRDI-CPS8-3HFU",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_99"
+    },
+    {
+      "code": "BETA-I9PU-A3E0-G041",
+      "device_id": null,
+      "activated_at": null,
+      "is_used": false,
+      "label": "beta_user_100"
     }
   ]
 }
