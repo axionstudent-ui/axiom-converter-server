@@ -75,13 +75,13 @@ def limit_required(f):
             device_usage['daily_count'] = 0
             device_usage['last_reset'] = now
 
-        limit = 5
+        limit = 99999
         used = device_usage['daily_count']
         
         if used >= limit:
             return jsonify({
                 'error': 'daily_limit',
-                'message': 'لقد استهلكت جميع محاولاتك اليوم (5 محاولات). يرجى الانتظار حتى الغد.',
+                'message': 'لقد استهلكت جميع محاولاتك اليوم 99999995 محاولات). يرجى الانتظار حتى الغد.',
                 'reset_in_seconds': 86400 - (now - device_usage['last_reset'])
             }), 429
 
