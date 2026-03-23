@@ -1,0 +1,8 @@
+2026-03-22 02:22:02,554 [ERROR] Font registration failed: Not a recognized TrueType font: version=0x0A0A0A0A
+ * Serving Flask app 'app'
+ * Debug mode: off
+2026-03-22 02:22:02,564 [INFO] [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5005
+ * Running on http://192.168.0.165:5005
+2026-03-22 02:22:02,564 [INFO] [33mPress CTRL+C to quit[0m

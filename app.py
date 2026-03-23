@@ -41,6 +41,9 @@ logging.basicConfig(level=logging.DEBUG,
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500 MB max upload
+# Remove upload size limit for large files
+app.config['MAX_FORM_MEMORY_SIZE'] = None
 
 # AI Configuration (Using Groq API from Project)
 AI_API_KEY = "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"
@@ -388,18 +391,28 @@ def convert():
                 converted = False
 
         if not converted:
-            # Fallback to LibreOffice for any format or when pdf2docx fails
+            # Fallback to LibreOffice — optimized for speed
+            # Determine timeout dynamically based on file size
+            try:
+                fsize = os.path.getsize(in_path)
+            except Exception:
+                fsize = 0
+            # 120s for files < 10MB, scale up to 600s for very large files
+            lo_timeout = max(180, min(600, int(fsize / (1024 * 1024)) * 15 + 120))
+
             cmd = [
                 'libreoffice', '--headless',
                 '--norestore',
+                '--nofirststartwizard',
+                '--nolockcheck',
                 '--convert-to', to_fmt,
                 '--outdir', tmp_dir, in_path,
             ]
             result = subprocess.run(
                 cmd,
                 capture_output=True, text=True,
-                timeout=120,
-                env={**os.environ, 'HOME': tmp_dir},
+                timeout=lo_timeout,
+                env={**os.environ, 'HOME': tmp_dir, 'TMPDIR': tmp_dir},
             )
 
             # Find actual LibreOffice output (it may differ in case)
