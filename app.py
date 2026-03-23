@@ -201,27 +201,110 @@ def _create_styled_pdf(content, title, filename):
 # SMART ANALYSIS ENDPOINTS
 # ══════════════════════════════════════════════════════
 
+def _detect_language(text: str) -> str:
+    """Detect whether the text is primarily Arabic, English, or mixed."""
+    if not text:
+        return 'arabic'
+    arabic_chars = sum(1 for c in text if '\u0600' <= c <= '\u06FF')
+    total_alpha = sum(1 for c in text if c.isalpha())
+    if total_alpha == 0:
+        return 'arabic'
+    ratio = arabic_chars / total_alpha
+    if ratio > 0.55:
+        return 'arabic'
+    elif ratio < 0.25:
+        return 'english'
+    else:
+        return 'mixed'
+
+
+def _chunk_text(text: str, chunk_size: int = 12000) -> list:
+    """Split text into chunks at paragraph boundaries to avoid cutting in the middle of sentences."""
+    chunks = []
+    while len(text) > chunk_size:
+        # Try to cut at paragraph break
+        cut = text.rfind('\n\n', 0, chunk_size)
+        if cut == -1:
+            cut = text.rfind('\n', 0, chunk_size)
+        if cut == -1:
+            cut = text.rfind('. ', 0, chunk_size)
+        if cut == -1:
+            cut = chunk_size
+        chunks.append(text[:cut].strip())
+        text = text[cut:].strip()
+    if text:
+        chunks.append(text)
+    return chunks
+
+
 @app.route('/summarize', methods=['POST'])
 @limit_required
 def summarize():
     if 'file' not in request.files:
         return jsonify({'error': 'no file'}), 400
-    
+
     f = request.files['file']
     tmp_dir = tempfile.mkdtemp()
     path = os.path.join(tmp_dir, f.filename)
     f.save(path)
-    
+
     text = _extract_text(path)
-    if not text:
-        return jsonify({'error': 'could not extract text'}), 422
-    
-    prompt = f"Please provide a comprehensive summary of the following text in both Arabic and English. Format it professionally with sections and bullet points. Text:\n\n{text[:50000]}"
-    summary = _get_ai_response(prompt, "You are an expert academic summarizer. Always provide bilingual output (Arabic and English).")
-    
-    pdf_buffer = _create_styled_pdf(summary, "ملخص الملف / File Summary", "summary.pdf")
-    
     shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    if not text or len(text.strip()) < 50:
+        return jsonify({'error': 'could not extract text from file'}), 422
+
+    # Detect language
+    lang = _detect_language(text)
+    if lang == 'arabic':
+        lang_instruction = (
+            "يجب أن يكون الملخص باللغة العربية فقط. "
+            "اكتب الملخص بأسلوب أكاديمي مفصل يشمل: المقدمة، الأفكار الرئيسية لكل قسم، التفاصيل المهمة، والخلاصة."
+        )
+        doc_title = "ملخص الملف الشامل"
+    elif lang == 'english':
+        lang_instruction = (
+            "The summary must be in English only. "
+            "Write a detailed academic summary covering: introduction, main ideas of each section, important details, and conclusion."
+        )
+        doc_title = "Comprehensive File Summary"
+    else:
+        lang_instruction = (
+            "Write the summary in the same language(s) used in the document. "
+            "Provide a detailed academic summary covering all sections, main ideas, and conclusions."
+        )
+        doc_title = "Comprehensive Summary / ملخص شامل"
+
+    chunks = _chunk_text(text, chunk_size=14000)
+    chunk_summaries = []
+
+    for i, chunk in enumerate(chunks):
+        chunk_prompt = (
+            f"{lang_instruction}\n\n"
+            f"هذا الجزء {i+1} من أصل {len(chunks)} من الوثيقة. قدّم ملخصاً تفصيلياً لهذا الجزء بنقاط منظمة:\n\n{chunk}"
+        )
+        chunk_summary = _get_ai_response(
+            chunk_prompt,
+            "You are an expert academic summarizer. Summarize in the same language as the document. Be detailed and comprehensive."
+        )
+        chunk_summaries.append(f"\n{'='*60}\nالجزء {i+1} / Part {i+1}\n{'='*60}\n{chunk_summary}")
+
+    # If multiple chunks, create a final merged summary
+    if len(chunks) > 1:
+        all_chunk_summaries = "\n\n".join(chunk_summaries)
+        final_prompt = (
+            f"{lang_instruction}\n\n"
+            f"بناءً على الملخصات الجزئية التالية لكل أجزاء الوثيقة، اكتب ملخصاً نهائياً شاملاً ومتكاملاً:\n\n{all_chunk_summaries[:15000]}"
+        )
+        final_summary = _get_ai_response(
+            final_prompt,
+            "You are an expert academic summarizer. Write a unified comprehensive summary based on all partial summaries."
+        )
+        full_content = f"{final_summary}\n\n{'='*80}\nالتفاصيل التفصيلية / Detailed Breakdown\n{'='*80}\n" + "\n\n".join(chunk_summaries)
+    else:
+        full_content = chunk_summaries[0]
+
+    pdf_buffer = _create_styled_pdf(full_content, doc_title, "summary.pdf")
     return send_file(
         pdf_buffer,
         as_attachment=True,
@@ -229,33 +312,95 @@ def summarize():
         mimetype='application/pdf'
     )
 
+
 @app.route('/generate_qa', methods=['POST'])
 @limit_required
 def generate_qa():
     if 'file' not in request.files:
         return jsonify({'error': 'no file'}), 400
-    
+
     f = request.files['file']
     tmp_dir = tempfile.mkdtemp()
     path = os.path.join(tmp_dir, f.filename)
     f.save(path)
-    
+
     text = _extract_text(path)
-    if not text:
-        return jsonify({'error': 'could not extract text'}), 422
-    
-    prompt = f"Generate a diverse set of conceptual, practical, and analytical questions and answers based on the following text. Provide both Arabic and English versions for each. Text:\n\n{text[:50000]}"
-    qa_content = _get_ai_response(prompt, "You are an academic examiner. Generate high-quality questions and answers in both Arabic and English.")
-    
-    pdf_buffer = _create_styled_pdf(qa_content, "أسئلة وأجوبة / Questions & Answers", "qa.pdf")
-    
     shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    if not text or len(text.strip()) < 50:
+        return jsonify({'error': 'could not extract text from file'}), 422
+
+    # Detect language and set instructions accordingly
+    lang = _detect_language(text)
+    if lang == 'arabic':
+        lang_instruction = "يجب أن تكون جميع الأسئلة والأجوبة والاختبارات باللغة العربية فقط."
+        qa_title = "أسئلة وأجوبة"
+        test_header = "اختبارات غير محلولة"
+        test_instruction = "باللغة العربية فقط"
+    elif lang == 'english':
+        lang_instruction = "All questions, answers, and tests must be in English only."
+        qa_title = "Questions & Answers"
+        test_header = "Unsolved Tests"
+        test_instruction = "in English only"
+    else:
+        lang_instruction = "Use the same language(s) as found in the document for all questions and answers."
+        qa_title = "Questions & Answers / أسئلة وأجوبة"
+        test_header = "Unsolved Tests / اختبارات غير محلولة"
+        test_instruction = "in the document's language"
+
+    chunks = _chunk_text(text, chunk_size=14000)
+    all_qa = []
+    all_unsolved = []
+
+    for i, chunk in enumerate(chunks):
+        # Generate solved Q&A for this chunk
+        qa_prompt = (
+            f"{lang_instruction}\n\n"
+            f"بناءً على النص التالي، قم بإنشاء مجموعة شاملة من الأسئلة والأجوبة تشمل:\n"
+            f"- أسئلة فهم المفاهيم (10 أسئلة على الأقل)\n"
+            f"- أسئلة تطبيقية وتحليلية (5 أسئلة على الأقل)\n"
+            f"- أسئلة مقارنة واستنتاج (5 أسئلة على الأقل)\n"
+            f"قدّم الإجابة الكاملة لكل سؤال.\n\nالنص:\n{chunk}"
+        )
+        qa_response = _get_ai_response(
+            qa_prompt,
+            f"You are an expert academic examiner. Generate comprehensive Q&A {test_instruction}. Always answer each question fully."
+        )
+        all_qa.append(f"الجزء {i+1} / Part {i+1}:\n" + qa_response if len(chunks) > 1 else qa_response)
+
+        # Generate unsolved test for this chunk
+        test_prompt = (
+            f"{lang_instruction}\n\n"
+            f"بناءً على النص التالي، قم بإنشاء اختباراً غير محلول يتضمن:\n"
+            f"- 10 أسئلة اختيار من متعدد (بدون تحديد الإجابة الصحيحة)\n"
+            f"- 5 أسئلة صح/خطأ (بدون تحديد الإجابة)\n"
+            f"- 5 أسئلة مقالية قصيرة (بدون إجابة)\n"
+            f"اتركها بدون إجابات لتكون اختباراً للطالب.\n\nالنص:\n{chunk}"
+        )
+        test_response = _get_ai_response(
+            test_prompt,
+            f"You are an expert academic examiner. Create an unsolved test {test_instruction}. Do NOT provide answers."
+        )
+        all_unsolved.append(f"الجزء {i+1} / Part {i+1}:\n" + test_response if len(chunks) > 1 else test_response)
+
+    solved_section = "\n\n".join(all_qa)
+    unsolved_section = "\n\n".join(all_unsolved)
+
+    separator = "\n\n" + "="*80 + "\n"
+    full_content = (
+        f"{solved_section}"
+        f"{separator}{test_header}{separator}"
+        f"{unsolved_section}"
+    )
+
+    pdf_buffer = _create_styled_pdf(full_content, qa_title, "qa.pdf")
     return send_file(
         pdf_buffer,
         as_attachment=True,
         download_name=f"QA_{f.filename}.pdf",
         mimetype='application/pdf'
     )
+
 
 @app.route('/text_to_pdf', methods=['POST'])
 @limit_required
@@ -264,7 +409,7 @@ def text_to_pdf():
     title = request.form.get('title', 'Document')
     if not text:
         return jsonify({'error': 'no text provided'}), 400
-        
+
     pdf_buffer = _create_styled_pdf(text, title, "document.pdf")
     return send_file(
         pdf_buffer,
@@ -273,25 +418,61 @@ def text_to_pdf():
         mimetype='application/pdf'
     )
 
+
 @app.route('/image_to_text', methods=['POST'])
 @limit_required
 def image_to_text():
     if 'file' not in request.files:
-        return jsonify({'error': 'no image'}), 400
-    
-    f = request.files['file']
-    img = PILImage.open(f.stream)
-    
-    try:
-        text = pytesseract.image_to_string(img, lang='ara+eng')
-    except Exception as e:
-        logger.error(f"OCR Error: {e}")
-        text = "Error during OCR processing. Check if Tesseract is installed."
+        return jsonify({'error': 'no image provided'}), 400
 
-    return jsonify({
-        'text': text,
-        'success': True
-    })
+    f = request.files['file']
+    tmp_dir = tempfile.mkdtemp()
+    img_path = os.path.join(tmp_dir, f.filename or 'image.png')
+
+    try:
+        f.save(img_path)
+        img = PILImage.open(img_path)
+
+        # Preprocess for better OCR accuracy
+        img_gray = img.convert('L')  # Grayscale
+        # Upscale small images for better recognition
+        w, h = img_gray.size
+        if w < 1000 or h < 1000:
+            scale = max(1000 / min(w, h), 1.5)
+            img_gray = img_gray.resize((int(w * scale), int(h * scale)), PILImage.LANCZOS)
+
+        # Try Arabic + English first, then fallback to English only
+        try:
+            raw_text = pytesseract.image_to_string(img_gray, lang='ara+eng', config='--psm 6')
+        except Exception:
+            try:
+                raw_text = pytesseract.image_to_string(img_gray, lang='eng', config='--psm 6')
+            except Exception as e:
+                raw_text = ''
+                logger.error(f'Tesseract error: {e}')
+
+        text = raw_text.strip()
+
+        # If OCR returned very little text, try AI vision fallback via base64
+        if len(text) < 30:
+            import base64
+            with open(img_path, 'rb') as img_file:
+                img_b64 = base64.b64encode(img_file.read()).decode('utf-8')
+            text = _get_ai_response(
+                f"Extract ALL text from this image accurately. Return only the extracted text, nothing else. Image (base64): {img_b64[:5000]}",
+                "You are an expert OCR system. Extract text from images with high accuracy in the original language."
+            )
+
+        if not text or len(text.strip()) < 5:
+            return jsonify({'error': 'no text could be extracted from image', 'success': False}), 422
+
+        return jsonify({'text': text, 'success': True})
+
+    except Exception as e:
+        logger.error(f'image_to_text error: {traceback.format_exc()}')
+        return jsonify({'error': str(e), 'success': False}), 500
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
 
 # ══════════════════════════════════════════════════════
 # Health Check & Dashboard
