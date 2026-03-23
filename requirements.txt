@@ -10,4 +10,5 @@ reportlab
 arabic-reshaper
 python-bidi
 requests
+opencv-python-headless
 pdf2docx
