@@ -28,9 +28,13 @@ try:
     # Arabic support for ReportLab
     from bidi.algorithm import get_display
     import arabic_reshaper
+except ImportError as e:
+    print(f"Failed to import core libraries: {e}")
+
+try:
     from pdf2docx import Converter
-except ImportError:
-    pass
+except ImportError as e:
+    print(f"Failed to import pdf2docx: {e}")
 
 logging.basicConfig(level=logging.DEBUG,
     format='%(asctime)s [%(levelname)s] %(message)s')
