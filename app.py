@@ -51,43 +51,8 @@ AI_MODEL = "llama-3.3-70b-versatile"
 def limit_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        device_id = request.form.get('device_id', '').strip()
-        username  = request.form.get('username',  '').strip()
-        
-        if not device_id:
-            return jsonify({'error': 'missing_device_id', 'message': 'معرّف الجهاز مفقود'}), 401
-
-        fp = _fingerprint(device_id)
-        usage_data = _load_usage()
-        
-        if fp not in usage_data['devices']:
-            usage_data['devices'][fp] = {
-                'daily_count': 0,
-                'last_reset': int(time.time()),
-            }
-        
-        device_usage = usage_data['devices'][fp]
-        now = int(time.time())
-        
-        # تصفير العداد اليومي كل 24 ساعة لكل جهاز
-        if now - device_usage.get('last_reset', 0) > 86400:
-            device_usage['daily_count'] = 0
-            device_usage['last_reset'] = now
-
-        limit = 99999
-        used = device_usage['daily_count']
-        
-        if used >= limit:
-            return jsonify({
-                'error': 'daily_limit',
-                'message': 'لقد استهلكت جميع محاولاتك اليوم 99999995 محاولات). يرجى الانتظار حتى الغد.',
-                'reset_in_seconds': 86400 - (now - device_usage['last_reset'])
-            }), 429
-
-        request.usage_data = usage_data
-        request.device_fp = fp
-        request.remaining_ops = limit - used
-        
+        # We allow unlimited usage now as per user request
+        request.remaining_ops = 999999
         return f(*args, **kwargs)
     return decorated
 
@@ -409,13 +374,21 @@ def convert():
     out_path = os.path.join(tmp_dir, out_name)
 
     try:
+        converted = False
         if to_fmt == 'docx' and f.filename.lower().endswith('.pdf'):
-            # Ultra-fast native Python PDF to DOCX conversion
-            cv = Converter(in_path)
-            cv.convert(out_path)
-            cv.close()
-        # Fallback to LibreOffice for DOCX -> PDF, XLSX -> PDF, etc.
-        else:
+            # Try ultra-fast native Python PDF to DOCX first
+            try:
+                cv = Converter(in_path)
+                cv.convert(out_path)
+                cv.close()
+                converted = True
+                logger.info('pdf2docx conversion succeeded')
+            except Exception as e:
+                logger.warning(f'pdf2docx failed, falling back to LibreOffice: {e}')
+                converted = False
+
+        if not converted:
+            # Fallback to LibreOffice for any format or when pdf2docx fails
             cmd = [
                 'libreoffice', '--headless',
                 '--norestore',
@@ -429,27 +402,18 @@ def convert():
                 env={**os.environ, 'HOME': tmp_dir},
             )
 
-            if result.returncode != 0:
-                # If LibreOffice failed, check if we somehow generated output anyway
-                out_found = False
-                for fn in os.listdir(tmp_dir):
-                    if fn.lower().endswith(f'.{to_fmt}') and fn != f.filename:
-                        out_path = os.path.join(tmp_dir, fn)
-                        out_name = fn
-                        out_found = True
-                        break
-                if not out_found:
-                    return jsonify({
-                        'error': 'conversion_failed',
-                        'message': result.stderr[:300],
-                    }), 500
-
-            # Find actual LibreOffice output if different
+            # Find actual LibreOffice output (it may differ in case)
             for fn in os.listdir(tmp_dir):
-                if fn.lower().endswith(f'.{to_fmt}') and fn != f.filename:
+                if fn.lower().endswith(f'.{to_fmt}') and fn.lower() != os.path.basename(in_path).lower():
                     out_path = os.path.join(tmp_dir, fn)
                     out_name = fn
                     break
+
+            if result.returncode != 0 and (not os.path.exists(out_path) or os.path.getsize(out_path) == 0):
+                return jsonify({
+                    'error': 'conversion_failed',
+                    'message': result.stderr[:500] or 'LibreOffice conversion failed',
+                }), 500
 
         if not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
             return jsonify({'error': 'empty output'}), 500
